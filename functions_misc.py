@@ -7,11 +7,12 @@ def get_obs_4pred_2D_pd(da_VAR_OBS,length_fc_month,start_yr,end_yr):
 
     year : initial year of the forecast
     month : initial month of the forecast
-    
+    lag: lead time of the forecast
+
     da_VAR_OBS : observation data (time series)
     length_fc_month : length of forecast month
-    start_yr : start year of the forecast
-    end_yr : end year of the forecast
+    start_yr : start initial year of the forecast
+    end_yr : end initial year of the forecast
     """
     
     ver_nyr=end_yr-start_yr+1
@@ -28,6 +29,7 @@ def get_obs_4pred_2D_pd(da_VAR_OBS,length_fc_month,start_yr,end_yr):
 
     # loop through 12 initial months of the forecast
     for mm in np.arange(0,12):
+        # loop through ver_nyr initial years of the forecast
         # get the corresponding starting and ending verification datetime for each forecast
         for ver_yrr in np.arange(0,ver_nyr):
             # start of verification datetime
@@ -37,7 +39,7 @@ def get_obs_4pred_2D_pd(da_VAR_OBS,length_fc_month,start_yr,end_yr):
             # end of verification datetime
             specific_pd_datetime2 = specific_pd_datetime + pd.DateOffset(months=length_fc_month)
 
-            # check the end time 
+            # check the end time not exceeding the time period of the data we read
             if (specific_pd_datetime2 <= pd.datetime(end_yr+2, 12, 1, 0, 0, 0)):
                 da_VAR_OBS_4prediction[ver_yrr,mm,:,:,:]=da_VAR_OBS.sel(
                     time=slice(specific_pd_datetime,specific_pd_datetime2)
@@ -48,14 +50,17 @@ def get_obs_4pred_2D_pd(da_VAR_OBS,length_fc_month,start_yr,end_yr):
     return da_VAR_OBS_4prediction
 
 def to_monthly(ds):
-    """Reshape time dimension to (year, month)"""
-    ds = ds.assign_coords(year=('time', ds.time.dt.year.data),
-                          month=('time', ds.time.dt.month.data))
-    return ds.set_index(time=('year', 'month')).unstack('time').transpose("year","month",...)
+    """Reshape (time) dimension to (year, month)"""
+    # assign year and month coordinates
+    ds = ds.assign_coords(year=('time', ds.time.dt.year.values),
+                          month=('time', ds.time.dt.month.values))
+    # unstack time into year and month
+    ds_monthly=ds.set_index(time=('year', 'month')).unstack('time').transpose("year","month",...)
+    return ds_monthly
 
 
 def detrend_dim(da, dim, deg=1):
-    """detrend the data along dimension = dim)"""
+    """detrend the data along a dimension)"""
     # detrend along a single dimension
     p = da.polyfit(dim=dim, deg=deg)
     fit = xr.polyval(da[dim], p.polyfit_coefficients)
